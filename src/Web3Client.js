@@ -9,10 +9,12 @@ const RELAY_HUB_ADDRESS = "0x3232f21A6E08312654270c78A773f00dd61d60f5";
 const ALTERNATIVE_ACCOUNT = "0x37F76dd37dbAA04559f7d22f890bb205B992AeE3";
 
 let selectedAccount;
+let gasPrice;
+const gasLimit = 100000;
+
 
 export const init = async () => {
   const provider = window.ethereum;
-
   if (typeof provider !== "undefined") {
     await provider.request({ method: "eth_requestAccounts" });
 
@@ -31,7 +33,7 @@ export const init = async () => {
 
     const web3 = new Web3(gsnProvider);
     const contract = new web3.eth.Contract(ERC20ContractABI, CONTRACT_ADDRESS);
-
+    gasPrice = window.web3.utils.toWei("1", "gwei");
     console.log(gsnProvider);
     window.web3 = web3;
     window.contract = contract;
@@ -40,8 +42,6 @@ export const init = async () => {
 
 export const mint = async (amount) => {
   try {
-    const gasPrice = window.web3.utils.toWei("1", "gwei");
-    const gasLimit = 100000;
     const mintTx = await window.contract.methods
       .mint(amount)
       .send({ from: selectedAccount, gasPrice, gasLimit });
@@ -55,10 +55,11 @@ export const mint = async (amount) => {
 };
 
 export const transfer = async (amount) => {
+
   try {
     const transferTx = await window.contract.methods
-      .transferFrom(selectedAccount, ALTERNATIVE_ACCOUNT, amount)
-      .send({ from: selectedAccount });
+      .transfer( ALTERNATIVE_ACCOUNT, amount)
+      .send({ from: selectedAccount, gasPrice, gasLimit });
     console.log(transferTx);
   } catch (error) {
     console.error("Error transfering:", error);
@@ -72,3 +73,18 @@ export const getPaymasterBalance = async () => {
     `Paymaster balance: ${window.web3.utils.fromWei(balance, "ether")} MATIC`
   );
 };
+
+export const getContractBalance = async (address) => {
+  const balance = await window.contract.methods.balanceOf(address).call();
+  console.log( 
+    `Total amount of tokens owned:${balance}`
+  )
+}
+
+export const getUserBalance = async() => {
+  await getContractBalance(selectedAccount);
+}
+
+export const getAlternativeBalance = async() => {
+  await getContractBalance(ALTERNATIVE_ACCOUNT);
+}
